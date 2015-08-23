@@ -47,7 +47,7 @@ class QmpClient:
         self.sock = None
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
-        assert local_host is None and local_port is None
+        assert self.sock is None
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,8 +57,11 @@ class QmpClient:
             if self.sock is not None:
                 self.sock.close()
                 self.sock = None
+            raise
 
     def connect_unix(self, filename):
+        assert self.sock is None
+
         try:
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock.connect(filename)
@@ -67,6 +70,7 @@ class QmpClient:
             if self.sock is not None:
                 self.sock.close()
                 self.sock = None
+            raise
 
     def close(self):
         if self.sock is not None:
