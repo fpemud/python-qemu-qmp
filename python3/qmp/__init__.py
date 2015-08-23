@@ -38,6 +38,7 @@ __version__ = "0.0.1"
 import json
 import ijson
 import socket
+import _util
 
 
 class QmpClient:
@@ -46,7 +47,6 @@ class QmpClient:
 
     def __init__(self):
         self.sock = None
-        self.jsonIter = None
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
         assert self.sock is None
@@ -78,7 +78,6 @@ class QmpClient:
 
     def close(self):
         if self.sock is not None:
-            self.jsonIter = None
             self.sock.close()
             self.sock = None
 
@@ -237,24 +236,18 @@ class QmpClient:
     def query_spice(self):
         assert False		# not implemented yet
 
-    def _negotiateCapabilities(self):
-        assert self.sock is not None
-
-
     def _connectBottomHalf(self):
-        self.jsonIter = ijson.items(self.sock, "")
         try:
-            self.jsonIter.next()
+            _util.jsonLoadObject(self.sock)
             json.dump(self.sock, {"execute": "qmp_capabilities"})
             self._returnProc()
         except:
-            self.jsonIter = None
             self.sock.close()
             self.sock = None
             raise
 
     def _returnProc(self):
-        obj = self.jsonIter.next()
+        obj = _util.jsonLoadObject(self.sock)
         val = obj.get("return", "illegal json string format")
         if val != "":
             raise QmpCmdError(val)
@@ -300,3 +293,4 @@ class QmpCmdError(Exception):
 
     def __init__(self, message):
         super(QmpCmdError, self).__init__(message)
+
