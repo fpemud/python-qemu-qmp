@@ -38,7 +38,6 @@ __version__ = "0.0.1"
 import json
 import ijson
 import socket
-import _util
 
 
 class QmpClient:
@@ -46,18 +45,18 @@ class QmpClient:
        manage and query running virtual machines."""
 
     def __init__(self):
+        self.s = None
         self.sock = None
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
         assert self.sock is None
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            s.connect((host, port))
-            self.sock = s.makefile()
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((host, port))
+            self.sock = self.s.makefile(mode="rw", buffering=2)
         except:
-            self.sock = None
-            s.close()
+            self.close()
             raise
 
         self._connectBottomHalf()
@@ -65,13 +64,12 @@ class QmpClient:
     def connect_unix(self, filename):
         assert self.sock is None
 
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            s.connect(filename)
-            self.sock = s.makefile()
+            self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.s.connect(filename)
+            self.sock = self.s.makefile(mode="rw", buffering=2)
         except:
-            self.sock = None
-            s.close()
+            self.close()
             raise
 
         self._connectBottomHalf()
@@ -80,35 +78,38 @@ class QmpClient:
         if self.sock is not None:
             self.sock.close()
             self.sock = None
+        if self.s is not None:
+            self.s.close()
+            self.s = None
 
     def cmd_quit(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "quit"})
+        json.dump({"execute": "quit"}, self.sock)
         self._returnProc()
 
     def cmd_stop(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "stop"})
+        json.dump({"execute": "stop"}, self.sock)
         self._returnProc()
 
     def cmd_conti(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "conti"})
+        json.dump({"execute": "conti"}, self.sock)
         self._returnProc()
 
     def cmd_system_powerdown(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "system_powerdown"})
+        json.dump({"execute": "system_powerdown"}, self.sock)
         self._returnProc()
 
     def cmd_system_reset(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "system_reset"})
+        json.dump({"execute": "system_reset"}, self.sock)
         self._returnProc()
 
     def cmd_system_wakeup(self):
         assert self.sock is not None
-        json.dump(self.sock, {"execute": "system_wakeup"})
+        json.dump({"execute": "system_wakeup"}, self.sock)
         self._returnProc()
 
     def cmd_device_add(self):
@@ -132,13 +133,13 @@ class QmpClient:
     def cmd_set_link(self, name, up):
         assert self.sock is not None
         assert isinstance(name, str) and isinstance(up, bool)
-        json.dump(self.sock, {"execute": "set_link", "arguments": {"name": name, "up": up}})
+        json.dump({"execute": "set_link", "arguments": {"name": name, "up": up}}, self.sock)
         self._returnProc()
 
     def cmd_balloon(self, value):
         assert self.sock is not None
         assert isinstance(value, int)
-        json.dump(self.sock, {"execute": "set_link", "arguments": {"value": value}})
+        json.dump({"execute": "set_link", "arguments": {"value": value}}, self.sock)
         self._returnProc()
 
     def cmd_eject(self, devname, force=False):
@@ -238,8 +239,8 @@ class QmpClient:
 
     def _connectBottomHalf(self):
         try:
-            _util.jsonLoadObject(self.sock)
-            json.dump(self.sock, {"execute": "qmp_capabilities"})
+            self._wtfJsonLoad(self.sock)
+            json.dump({"execute": "qmp_capabilities"}, self.sock)
             self._returnProc()
         except:
             self.sock.close()
@@ -247,10 +248,16 @@ class QmpClient:
             raise
 
     def _returnProc(self):
-        obj = _util.jsonLoadObject(self.sock)
+        obj = self._wtfJsonLoad(self.sock)
         val = obj.get("return", "illegal json string format")
-        if val != "":
+        if not isinstance(val, dict) or len(val) != 0:
             raise QmpCmdError(val)
+
+    def _wtfJsonLoad(self, f):
+        """I suppose json.load() should parse object one by one, but it only starts parsing after all the bytes are read.
+           This behavior is broken on sockets: http://stackoverflow.com/questions/7337523/how-to-read-json-from-socket-in-python-incremental-parsing-of-json
+           I tried ijson but it seems wierd either. Fortunately QEMU returns json object in one line, so I can do this trick."""
+        return json.loads(f.readline())
 
 
 class QmpClientEventHandler:

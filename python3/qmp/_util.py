@@ -44,23 +44,24 @@ def jsonLoadObject(f):
                 raise UnexpectedDataError("invalid event %s" % (event))
             bfirst = False
 
-        if event == 'start_map':
+        if event == "start_map":
             m = {}
-            self.containers[-1](m)
+            containers[-1](m)
             def setter(value):
                 m[mkey] = value
-            self.containers.append(setter)
+            containers.append(setter)
         elif event == 'start_array':
             a = []
             containers[-1](a)
             containers.append(a.append)
-        if event == 'map_key':
+        elif event == 'map_key':
             mkey = value
         elif event == 'end_array' or event == 'end_map':
             containers.pop()
         elif event in ["boolean", "number", "string"]:
             containers[-1](value)
         else:
+            print("debug1", prefix, event, value)
             assert False
 
         if prefix == "" and event in ["end_array", "end_map", "boolean", "number", "string"]:
