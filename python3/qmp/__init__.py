@@ -36,6 +36,7 @@ __author__ = "fpemud@sina.com (Fpemud)"
 __version__ = "0.0.1"
 
 import json
+import ijson
 import socket
 
 
@@ -45,35 +46,39 @@ class QmpClient:
 
     def __init__(self):
         self.sock = None
+        self.jsonIter = None
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
         assert self.sock is None
 
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((host, port))
-            self._negotiateCapabilities()
+            s.connect((host, port))
+            self.sock = s.makefile()
         except:
-            if self.sock is not None:
-                self.sock.close()
-                self.sock = None
+            self.sock = None
+            s.close()
             raise
+
+        self._connectBottomHalf()
 
     def connect_unix(self, filename):
         assert self.sock is None
 
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.connect(filename)
-            self._negotiateCapabilities()
+            s.connect(filename)
+            self.sock = s.makefile()
         except:
-            if self.sock is not None:
-                self.sock.close()
-                self.sock = None
+            self.sock = None
+            s.close()
             raise
+
+        self._connectBottomHalf()
 
     def close(self):
         if self.sock is not None:
+            self.jsonIter = None
             self.sock.close()
             self.sock = None
 
@@ -235,12 +240,22 @@ class QmpClient:
     def _negotiateCapabilities(self):
         assert self.sock is not None
 
-        json.load(self.sock)
-        json.dump(self.sock, {"execute": "qmp_capabilities"})
-        self._returnProc()
+
+    def _connectBottomHalf(self):
+        self.jsonIter = ijson.items(self.sock, "")
+        try:
+            self.jsonIter.next()
+            json.dump(self.sock, {"execute": "qmp_capabilities"})
+            self._returnProc()
+        except:
+            self.jsonIter = None
+            self.sock.close()
+            self.sock = None
+            raise
 
     def _returnProc(self):
-        val = json.load(self.sock).get("return", "illegal json string format")
+        obj = self.jsonIter.next()
+        val = obj.get("return", "illegal json string format")
         if val != "":
             raise QmpCmdError(val)
 
