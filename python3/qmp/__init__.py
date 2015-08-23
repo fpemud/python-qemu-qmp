@@ -52,6 +52,7 @@ class QmpClient:
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((host, port))
+            self._negotiateCapabilities()
         except:
             if self.sock is not None:
                 self.sock.close()
@@ -61,6 +62,7 @@ class QmpClient:
         try:
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock.connect(filename)
+            self._negotiateCapabilities()
         except:
             if self.sock is not None:
                 self.sock.close()
@@ -70,13 +72,6 @@ class QmpClient:
         if self.sock is not None:
             self.sock.close()
             self.sock = None
-
-    def negotiate_capabilities(self):
-        assert self.sock is not None
-
-        json.load(self.sock)
-        json.dump(self.sock, {"execute": "qmp_capabilities"})
-        self._returnProc()
 
     def cmd_quit(self):
         assert self.sock is not None
@@ -232,6 +227,13 @@ class QmpClient:
 
     def query_spice(self):
         assert False		# not implemented yet
+
+    def _negotiateCapabilities(self):
+        assert self.sock is not None
+
+        json.load(self.sock)
+        json.dump(self.sock, {"execute": "qmp_capabilities"})
+        self._returnProc()
 
     def _returnProc(self):
         val = json.load(self.sock).get("return", "illegal json string format")
