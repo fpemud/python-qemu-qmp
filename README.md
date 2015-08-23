@@ -1,4 +1,4 @@
-python-qmp
+python-qemu-qmp
 =========
 
 Python implementation of the Qemu Monitor Protocol (QMP)
