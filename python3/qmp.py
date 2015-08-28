@@ -36,110 +36,116 @@ __author__ = "fpemud@sina.com (Fpemud)"
 __version__ = "0.0.1"
 
 import json
-import ijson
 import socket
 
 
 class QmpClient:
-    """This library provides an interface to QEMU's QMP server, allowing you to
+    """This library is used to access the QEMU's QMP interface, allowing you to
        manage and query running virtual machines."""
 
     def __init__(self):
-        self.s = None
+        self.handler = None
         self.sock = None
+        self.sockf = None
+
+    def set_event_handler(handler):
+        self.handler = handler
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
-        assert self.sock is None
+        """Connects to QEMU's QMP server via TCP socket."""
+        assert self.sock is None and self.sockf is None
 
         try:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((host, port))
-            self.sock = self.s.makefile(mode="rw", buffering=2)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((host, port))
+            self.sockf = self.sock.makefile(mode="rw", buffering=2)
+            self._connectBottomHalf()
         except:
             self.close()
             raise
-
-        self._connectBottomHalf()
 
     def connect_unix(self, filename):
-        assert self.sock is None
+        """Connects to QEMU's QMP server via UNIX socket."""
+        assert self.sock is None and self.sockf is None
 
         try:
-            self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.s.connect(filename)
-            self.sock = self.s.makefile(mode="rw", buffering=2)
+            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.sock.connect(filename)
+            self.sockf = self.sock.makefile(mode="rw", buffering=2)
+            self._connectBottomHalf()
         except:
             self.close()
             raise
 
-        self._connectBottomHalf()
+    def is_connected(self):
+        return self.sockf is not None
 
     def close(self):
+        if self.sockf is not None:
+            self.sockf.close()
+            self.sockf = None
         if self.sock is not None:
             self.sock.close()
             self.sock = None
-        if self.s is not None:
-            self.s.close()
-            self.s = None
 
     def cmd_quit(self):
-        assert self.sock is not None
-        json.dump({"execute": "quit"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "quit"}, self.sockf)
         self._returnProc()
 
     def cmd_stop(self):
-        assert self.sock is not None
-        json.dump({"execute": "stop"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "stop"}, self.sockf)
         self._returnProc()
 
     def cmd_conti(self):
-        assert self.sock is not None
-        json.dump({"execute": "conti"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "conti"}, self.sockf)
         self._returnProc()
 
     def cmd_system_powerdown(self):
-        assert self.sock is not None
-        json.dump({"execute": "system_powerdown"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "system_powerdown"}, self.sockf)
         self._returnProc()
 
     def cmd_system_reset(self):
-        assert self.sock is not None
-        json.dump({"execute": "system_reset"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "system_reset"}, self.sockf)
         self._returnProc()
 
     def cmd_system_wakeup(self):
-        assert self.sock is not None
-        json.dump({"execute": "system_wakeup"}, self.sock)
+        assert self.sockf is not None
+        json.dump({"execute": "system_wakeup"}, self.sockf)
         self._returnProc()
 
     def cmd_device_add(self):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_device_del(self):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_chardev_add(self, chardev_id, backend):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_chardev_remove(self, chardev_id):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_netdev_add(self):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_netdev_del(self):
-        assert self.sock is not None
+        assert self.sockf is not None
 
     def cmd_set_link(self, name, up):
-        assert self.sock is not None
+        assert self.sockf is not None
         assert isinstance(name, str) and isinstance(up, bool)
-        json.dump({"execute": "set_link", "arguments": {"name": name, "up": up}}, self.sock)
+        json.dump({"execute": "set_link", "arguments": {"name": name, "up": up}}, self.sockf)
         self._returnProc()
 
     def cmd_balloon(self, value):
-        assert self.sock is not None
+        assert self.sockf is not None
         assert isinstance(value, int)
-        json.dump({"execute": "set_link", "arguments": {"value": value}}, self.sock)
+        json.dump({"execute": "set_link", "arguments": {"value": value}}, self.sockf)
         self._returnProc()
 
     def cmd_eject(self, devname, force=False):
@@ -239,16 +245,16 @@ class QmpClient:
 
     def _connectBottomHalf(self):
         try:
-            self._wtfJsonLoad(self.sock)
-            json.dump({"execute": "qmp_capabilities"}, self.sock)
+            obj = self._wtfJsonLoad(self.sockf)
+            json.dump({"execute": "qmp_capabilities"}, self.sockf)
             self._returnProc()
         except:
-            self.sock.close()
-            self.sock = None
+            self.sockf.close()
+            self.sockf = None
             raise
 
     def _returnProc(self):
-        obj = self._wtfJsonLoad(self.sock)
+        obj = self._wtfJsonLoad(self.sockf)
         val = obj.get("return", "illegal json string format")
         if not isinstance(val, dict) or len(val) != 0:
             raise QmpCmdError(val)

@@ -2,4 +2,4 @@
                             -machine type=q35 \
                             -display gtk \
                             -monitor none \
-                            -qmp tcp:127.0.0.1:4444,server
+                            -qmp tcp:127.0.0.1:58004
