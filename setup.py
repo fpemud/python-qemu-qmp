@@ -42,5 +42,5 @@ setup(
     url='http://github.com/fpemud/python-qemu-qmp',
     download_url='',
     packages=['qmp'],
-    package_dir={'qmp': 'python3/qmp'},
+    package_dir={'': 'python3'},
 )
