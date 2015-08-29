@@ -244,14 +244,9 @@ class QmpClient:
         assert False		# not implemented yet
 
     def _connectBottomHalf(self):
-        try:
-            obj = self._wtfJsonLoad(self.sockf)
-            json.dump({"execute": "qmp_capabilities"}, self.sockf)
-            self._returnProc()
-        except:
-            self.sockf.close()
-            self.sockf = None
-            raise
+        obj = self._wtfJsonLoad(self.sockf)
+        json.dump({"execute": "qmp_capabilities"}, self.sockf)
+        self._returnProc()
 
     def _returnProc(self):
         obj = self._wtfJsonLoad(self.sockf)
@@ -262,7 +257,7 @@ class QmpClient:
     def _wtfJsonLoad(self, f):
         """I suppose json.load() should parse object one by one, but it only starts parsing after all the bytes are read.
            This behavior is broken on sockets: http://stackoverflow.com/questions/7337523/how-to-read-json-from-socket-in-python-incremental-parsing-of-json
-           I tried ijson but it seems wierd either. Fortunately QEMU returns json object in one line, so I can do this trick."""
+           I tried ijson but it seems wierd either. Fortunately QEMU returns one json object in one line, so I can do this trick."""
         return json.loads(f.readline())
 
 
