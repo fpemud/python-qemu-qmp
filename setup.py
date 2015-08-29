@@ -41,6 +41,6 @@ setup(
     classifiers=classif,
     url='http://github.com/fpemud/python-qemu-qmp',
     download_url='',
-    packages=['qmp'],
+    py_modules=['qmp'],
     package_dir={'': 'python3'},
 )
