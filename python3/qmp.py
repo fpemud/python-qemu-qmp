@@ -249,10 +249,13 @@ class QmpClient:
         self._returnProc()
 
     def _returnProc(self):
-        obj = self._wtfJsonLoad(self.sockf)
-        val = obj.get("return", "illegal json string format")
-        if not isinstance(val, dict) or len(val) != 0:
-            raise QmpCmdError(val)
+        while True:
+            obj = self._wtfJsonLoad(self.sockf)
+            if "return" not in obj:
+                continue
+            if not isinstance(obj["return"], dict) or len(obj["return"]) != 0:
+                raise QmpCmdError(obj["return"])
+            break
 
     def _wtfJsonLoad(self, f):
         """I suppose json.load() should parse object one by one, but it only starts parsing after all the bytes are read.
