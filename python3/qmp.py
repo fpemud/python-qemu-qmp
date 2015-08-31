@@ -128,9 +128,9 @@ class QmpClient:
         json.dump({"execute": "object-del", "arguments": {"id": qom_id}}, self.sockf)
         self._returnProc()
 
-    def cmd_device_add(self, dev_driver, dev_id, drive_id=None):
+    def cmd_device_add(self, dev_driver, drive_id=None):
         assert self.sockf is not None
-        data = {"execute": "device_add", "arguments": {"driver": dev_driver, "id": dev_id}}
+        data = {"execute": "device_add", "arguments": {"driver": dev_driver}}
         if drive_id is not None:
             data["arguments"]["drive"] = drive_id
         json.dump(data, self.sockf)
