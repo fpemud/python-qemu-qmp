@@ -48,7 +48,7 @@ class QmpClient:
         self.sock = None
         self.sockf = None
 
-    def set_event_handler(handler):
+    def set_event_handler(self, handler):
         self.handler = handler
 
     def connect_tcp(self, host, port, local_host=None, local_port=None):
@@ -118,6 +118,16 @@ class QmpClient:
         json.dump({"execute": "system_wakeup"}, self.sockf)
         self._returnProc()
 
+    def cmd_object_add(self, qom_type, qom_id, **kwargs):
+        assert self.sockf is not None
+        json.dump({"execute": "object-add", "arguments": {"qom-type": qom_type, "id": qom_id, "props": kwargs}}, self.sockf)
+        self._returnProc()
+
+    def cmd_object_del(self, qom_id):
+        assert self.sockf is not None
+        json.dump({"execute": "object-del", "arguments": {"id": qom_id}}, self.sockf)
+        self._returnProc()
+
     def cmd_device_add(self):
         assert self.sockf is not None
 
@@ -155,12 +165,6 @@ class QmpClient:
         assert False		# not implemented yet
 
     def cmd_screen_dump(self, filename):
-        assert False		# not implemented yet
-
-    def cmd_object_add(self):
-        assert False		# not implemented yet
-
-    def cmd_object_del(self):
         assert False		# not implemented yet
 
     def cmd_send_key(self, keys):
@@ -244,7 +248,7 @@ class QmpClient:
         assert False		# not implemented yet
 
     def _connectBottomHalf(self):
-        obj = self._wtfJsonLoad(self.sockf)
+        self._wtfJsonLoad(self.sockf)
         json.dump({"execute": "qmp_capabilities"}, self.sockf)
         self._returnProc()
 
@@ -304,4 +308,3 @@ class QmpCmdError(Exception):
 
     def __init__(self, message):
         super(QmpCmdError, self).__init__(message)
-
