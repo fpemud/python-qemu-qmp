@@ -143,7 +143,8 @@ class QmpClient:
 
     def cmd_blockdev_add(self, dev_driver, dev_id, filename):
         assert self.sockf is not None
-        json.dump({"execute": "blockdev-add", "arguments": {"options": {"driver": dev_driver, "id": dev_id, "file": {"driver": "file", "filename": filename}}}}, self.sockf)
+        data = {"execute": "blockdev-add", "arguments": {"options": {"driver": dev_driver, "id": dev_id, "file": {"driver": "file", "filename": filename}}}}
+        json.dump(data, self.sockf)
         self._returnProc()
 
     def cmd_blockdev_del(self, dev_id):
@@ -270,11 +271,10 @@ class QmpClient:
     def _returnProc(self):
         while True:
             obj = self._wtfJsonLoad(self.sockf)
-            if "return" not in obj:
-                continue
-            if not isinstance(obj["return"], dict) or len(obj["return"]) != 0:
-                raise QmpCmdError(obj["return"])
-            break
+            if "return" in obj:
+                break
+            if "error" in obj:
+                raise QmpCmdError(obj["error"]["desc"])
 
     def _wtfJsonLoad(self, f):
         """I suppose json.load() should parse object one by one, but it only starts parsing after all the bytes are read.
