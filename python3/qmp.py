@@ -128,22 +128,37 @@ class QmpClient:
         json.dump({"execute": "object-del", "arguments": {"id": qom_id}}, self.sockf)
         self._returnProc()
 
-    def cmd_device_add(self):
+    def cmd_device_add(self, dev_driver, dev_id, drive_id=None):
+        assert self.sockf is not None
+        data = {"execute": "device_add", "arguments": {"driver": dev_driver, "id": dev_id}}
+        if drive_id is not None:
+            data["arguments"]["drive"] = drive_id
+        json.dump(data, self.sockf)
+        self._returnProc()
+
+    def cmd_device_del(self, dev_id):
+        assert self.sockf is not None
+        json.dump({"execute": "device_del", "arguments": {"id": dev_id}}, self.sockf)
+        self._returnProc()
+
+    def cmd_blockdev_add(self, dev_driver, dev_id, filename):
+        assert self.sockf is not None
+        json.dump({"execute": "blockdev-add", "arguments": {"options": {"driver": dev_driver, "id": dev_id, "file": {"driver": "file", "filename": filename}}}}, self.sockf)
+        self._returnProc()
+
+    def cmd_blockdev_del(self, dev_id):
+        assert False		# not implemented in QEMU
+
+    def cmd_chardev_add(self, dev_id, backend):
         assert self.sockf is not None
 
-    def cmd_device_del(self):
+    def cmd_chardev_remove(self, dev_id):
         assert self.sockf is not None
 
-    def cmd_chardev_add(self, chardev_id, backend):
+    def cmd_netdev_add(self, dev_id):
         assert self.sockf is not None
 
-    def cmd_chardev_remove(self, chardev_id):
-        assert self.sockf is not None
-
-    def cmd_netdev_add(self):
-        assert self.sockf is not None
-
-    def cmd_netdev_del(self):
+    def cmd_netdev_del(self, dev_id):
         assert self.sockf is not None
 
     def cmd_set_link(self, name, up):
